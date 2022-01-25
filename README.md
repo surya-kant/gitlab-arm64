@@ -1,4 +1,457 @@
 # GitLab CE for arm64
-Docker image build files for hosting container on ubuntu server on raspberrypi4.
+Docker image build files for hosting container on ubuntu server on raspberrypi4. Please boot your raspberry via USB as microSD card will wear out soon.
 
+GitLab CE for ARM64 is in Docker Hub:
 
+- [suryakant24/gitlab](https://hub.docker.com/repository/docker/suryakant24/gitlab-ce/)
+
+The GitLab Docker image is a monolithic image of GitLab running all the necessary services on a single container.
+
+**GitLab only offers the Community Edition for Raspbery Pi**, this Docker image is based on that one; in addition, **only stable builds are containerized**.
+
+### NOTES
+
+* This image provides default settings for it to work properly on ARM devices, which do not have a lot of RAM, you can review these settings [here](docker/assets/gitlab.rb) or use your own settings as explained in [Configure GitLab](#configure-gitlab). As a side note, *although is not advised,* you may still need to add a bit of SWAP (2GB recommended) to your device or have at least 2GB RAM, this can be achieved by using a USB Drive you have gathering dust somewhere; **DO NOT USE THE SD CARD FOR THIS TASK**.
+* This image does not apply sysctl parameters (see [wrapper file](docker/assets/wrapper#L90)), because it has been causing problems when starting in Docker Swarm, you can read the [reddit discussion](https://www.reddit.com/r/kubernetes/comments/7pr6r7/gitlab_ce_docker_image_for_arm/dtqemei/) about that. Get to the [Sysctl tunning](#sysctl-tunning) topic in order to know how to apply this on the host running GitLab.
+
+## The GitLab Docker image can be run in multiple ways:
+
+* [Run the image in Docker Engine](#run-the-image)
+* [Install GitLab using docker-compose](#install-gitlab-using-docker-compose)
+* [Install GitLab into a cluster](#install-gitlab-into-a-cluster)
+
+## Prerequisites
+
+Docker installation is required, see the [official installation docs](https://docs.docker.com/engine/installation/).
+
+## Run the image
+
+Run the image:
+
+```bash
+docker run -d \
+--hostname gitlab.example.com \
+-p 443:443 -p 80:80 -p 22:22 \
+--name gitlab-ce \
+--restart always \
+-v /srv/gitlab/config:/etc/gitlab \
+-v /srv/gitlab/logs:/var/log/gitlab \
+-v /srv/gitlab/data:/var/opt/gitlab \
+suryakant24/gitlab-ce:arm64
+```
+
+This will download and start a GitLab CE container and publish ports needed to
+access SSH, HTTP and HTTPS. All GitLab data will be stored as subdirectories of
+`/srv/gitlab/`. The container will automatically `restart` after a system reboot.
+
+You can now login to the web interface as explained in
+[After starting a container](#after-starting-a-container).
+
+If you are on *SELinux* then run this instead:
+
+```bash
+docker run -d \
+--hostname gitlab.example.com \
+-p 443:443 -p 80:80 -p 22:22 \
+--name gitlab-ce \
+--restart always \
+-v /srv/gitlab/config:/etc/gitlab:Z \
+-v /srv/gitlab/logs:/var/log/gitlab:Z \
+-v /srv/gitlab/data:/var/opt/gitlab:Z \
+suryakant24/gitlab-ce:arm64
+```
+
+This will ensure that the Docker process has enough permissions to create the
+config files in the mounted volumes.
+
+## Where is the data stored?
+
+The GitLab container uses host mounted volumes to store persistent data:
+
+| Local location | Container location | Usage |
+| -------------- | ------------------ | ----- |
+| `/srv/gitlab/data`  | `/var/opt/gitlab` | For storing application data |
+| `/srv/gitlab/logs`  | `/var/log/gitlab` | For storing logs |
+| `/srv/gitlab/config`| `/etc/gitlab`     | For storing the GitLab configuration files |
+
+You can fine tune these directories to meet your requirements.
+
+## Configure GitLab
+
+This container uses the official Omnibus GitLab package, so all configuration
+is done in the unique configuration file `/etc/gitlab/gitlab.rb`.
+
+To access GitLab's configuration file, you can start a shell session in the
+context of a running container. This will allow you to browse all directories
+and use your favorite text editor:
+
+```bash
+docker exec -it gitlab-ce /bin/bash
+```
+
+You can also just edit `/etc/gitlab/gitlab.rb`:
+
+```bash
+docker exec -it gitlab-ce vi /etc/gitlab/gitlab.rb
+```
+
+Once you open `/etc/gitlab/gitlab.rb` make sure to set the `external_url` to
+point to a valid URL.
+
+To receive e-mails from GitLab you have to configure the
+[SMTP settings](https://gitlab.com/gitlab-org/omnibus-gitlab/tree/master/doc/settings/smtp.md) because the GitLab Docker image doesn't
+have an SMTP server installed.
+
+You may also be interested in [Enabling HTTPS](https://gitlab.com/gitlab-org/omnibus-gitlab/tree/master/doc/settings/nginx.md#enable-https).
+
+After you make all the changes you want, you will need to restart the container
+in order to reconfigure GitLab:
+
+```bash
+docker restart gitlab-ce
+```
+
+_**Note:** GitLab will reconfigure itself whenever the container starts._
+
+For more options about configuring GitLab please check the
+[Omnibus GitLab documentation](https://gitlab.com/gitlab-org/omnibus-gitlab/tree/master/doc/settings/configuration.md).
+
+### Pre-configure Docker container
+
+You can pre-configure the GitLab Docker image by adding the environment
+variable `GITLAB_OMNIBUS_CONFIG` to docker run command. This variable can
+contain any `gitlab.rb` setting and will be evaluated before loading the
+container's `gitlab.rb` file. That way you can easily configure GitLab's
+external URL, make any database configuration or any other option from the
+[Omnibus GitLab template](https://gitlab.com/gitlab-org/omnibus-gitlab/blob/master/files/gitlab-config-template/gitlab.rb.template).
+
+_Note: The settings contained in `GITLAB_OMNIBUS_CONFIG` will not be written to the `gitlab.rb` configuration file, they're evaluated on load._
+
+Here's an example that sets the external URL and enables LFS while starting
+the container:
+_Note: external_url 'http://localhost/'. This is container's localhost this can be accessed at docker server ip
+
+```bash
+sudo docker run --detach
+--hostname gitlab-ce
+--env GITLAB_OMNIBUS_CONFIG="external_url 'http://localhost'; gitlab_rails['lfs_enabled'] = true;"
+--publish 443:443
+--publish 80:80
+--publish 22:22
+--name gitlab-ce
+--restart unless-stopped
+--volume $HOME/volumes/gitlab/config:/etc/gitlab
+--volume $HOME/volumes/gitlab/logs:/var/log/gitlab
+--volume $HOME/volumes/gitlab/data:/var/opt/gitlab
+suryakant24/gitlab-ce:arm64
+```
+
+Note that every time you execute a `docker run` command, you need to provide
+the `GITLAB_OMNIBUS_CONFIG` option. The content of `GITLAB_OMNIBUS_CONFIG` is
+_not_ preserved between subsequent runs.
+
+There are also a limited number of environment variables to configure GitLab.
+They are documented in the [environment variables section of the GitLab documentation](https://docs.gitlab.com/ce/administration/environment_variables.html).
+
+## After starting a container
+
+After starting a container you can visit <http://localhost/> or
+<http://192.168.59.103> if you use boot2docker. It might take a while before
+the Docker container starts to respond to queries.
+
+The very first time you visit GitLab, you will be asked to set up the admin
+password. After you change it, you can login with username `root` and the
+password you set up.
+
+## Upgrade GitLab to newer version
+
+To upgrade GitLab to a new version you have to:
+
+1. Stop the running container:
+
+    ```bash
+    docker stop gitlab-ce
+    ```
+
+2. Remove existing container:
+
+    ```bash
+    docker rm gitlab-ce
+    ```
+
+3. Pull the new image:
+
+    ```bash
+    docker pull suryakant24/gitlab-ce:arm64
+    ```
+
+4. Create the container once again with previously specified options:
+
+    ```bash
+    docker run -d \
+    --hostname gitlab.example.com \
+    -p 443:443 -p 80:80 -p 22:22 \
+    --name gitlab-ce \
+    --restart always \
+    -v /srv/gitlab/config:/etc/gitlab \
+    -v /srv/gitlab/logs:/var/log/gitlab \
+    -v /srv/gitlab/data:/var/opt/gitlab \
+    suryakant24/gitlab-ce:arm64
+    ```
+
+On the first run, GitLab will reconfigure and update itself.
+
+### Run GitLab CE on public IP address
+
+You can make Docker to use your IP address and forward all traffic to the
+GitLab CE container by modifying the `-p` flag.
+
+To expose GitLab CE on IP 1.1.1.1:
+
+```bash
+docker run -d \
+--hostname gitlab.example.com \
+-p 1.1.1.1:443:443 \
+-p 1.1.1.1:80:80 \
+-p 1.1.1.1:22:22 \
+--name gitlab-ce \
+--restart always \
+-v /srv/gitlab/config:/etc/gitlab \
+-v /srv/gitlab/logs:/var/log/gitlab \
+-v /srv/gitlab/data:/var/opt/gitlab \
+ulm0/gitlab
+```
+
+You can then access your GitLab instance at `http://1.1.1.1/` and `https://1.1.1.1/`.
+
+### Expose GitLab on different ports
+
+GitLab will occupy by default the following ports inside the container:
+
+- `80` (HTTP)
+- `443` (if you configure HTTPS)
+- `8080` (used by Unicorn)
+- `22` (used by the SSH daemon)
+
+> **Note:**
+The format for publishing ports is `hostPort:containerPort`. Read more in
+Docker's documentation about [exposing incoming ports][docker-ports].
+
+> **Warning:**
+Do NOT use port `8080` otherwise there will be conflicts. This port is already
+used by Unicorn that runs internally in the container.
+
+If you want to use a different port than `80` (HTTP) or `443` (HTTPS) for the
+container, you need to add a separate `-p` directive to the `docker run`
+command.
+
+For example, to expose the web interface on port `8929`, and the SSH service on
+port `2289`, use the following `docker run` command:
+
+```bash
+docker run -d \
+--hostname gitlab.example.com \
+-p 8929:80 -p 2289:22 \
+--name gitlab-ce \
+--restart always \
+-v /srv/gitlab/config:/etc/gitlab \
+-v /srv/gitlab/logs:/var/log/gitlab \
+-v /srv/gitlab/data:/var/opt/gitlab \
+ulm0/gitlab
+```
+
+You then need to appropriately configure `gitlab.rb`:
+
+1. Set `external_url`:
+
+    ```sh
+    # For HTTP
+    external_url "http://gitlab.example.com:8929"
+
+    or
+
+    # For HTTPS (notice the https)
+    external_url "https://gitlab.example.com:8929"
+    ```
+
+    For more information see the [NGINX documentation](https://gitlab.com/gitlab-org/omnibus-gitlab/tree/master/doc/settings/nginx.md).
+
+2. Set `gitlab_shell_ssh_port`:
+
+    ```rb
+    gitlab_rails['gitlab_shell_ssh_port'] = 2289
+    ```
+
+Following the above example you will be able to reach GitLab from your
+web browser under `<hostIP>:8929` and push using SSH under the port `2289`.
+
+A `docker-compose.yml` example that uses different ports can be found in the
+[docker-compose](#install-gitlab-using-docker-compose) section.
+
+## Diagnose potential problems
+
+Read container logs:
+
+```bash
+docker logs gitlab-ce
+```
+
+Enter running container:
+
+```bash
+docker exec -it gitlab-ce /bin/bash
+```
+
+From within the container you can administer the GitLab container as you would
+normally administer an
+[Omnibus installation](https://gitlab.com/gitlab-org/omnibus-gitlab/blob/master/README.md)
+
+## Install GitLab using docker-compose
+
+With [Docker compose] you can easily configure, install, and upgrade your
+Docker-based GitLab installation.
+
+1. [Install][install-compose] Docker Compose
+1. Create a `docker-compose.yml` file (or [download an example][down-yml]):
+
+    ```yaml
+    web:
+      image: 'suryakant24/gitlab-ce:arm64'
+      restart: always
+      hostname: 'gitlab.example.com'
+      environment:
+        GITLAB_OMNIBUS_CONFIG: |
+          external_url 'https://gitlab.example.com'
+          # Add any other gitlab.rb configuration here, each on its own line
+      ports:
+        - '80:80'
+        - '443:443'
+        - '22:22'
+      volumes:
+        - '/srv/gitlab/config:/etc/gitlab'
+        - '/srv/gitlab/logs:/var/log/gitlab'
+        - '/srv/gitlab/data:/var/opt/gitlab'
+    ```
+
+1. Make sure you are in the same directory as `docker-compose.yml` and run
+  `docker-compose up -d` to start GitLab
+
+Read ["Pre-configure Docker container"](#pre-configure-docker-container) to see
+how the `GITLAB_OMNIBUS_CONFIG` variable works.
+
+Below is another `docker-compose.yml` example with GitLab running on a custom
+HTTP and SSH port. Notice how the `GITLAB_OMNIBUS_CONFIG` variables match the
+`ports` section:
+
+```yaml
+web:
+  image: 'suryakant24/gitlab-ce:arm64'
+  restart: always
+  hostname: 'gitlab.example.com'
+  environment:
+    GITLAB_OMNIBUS_CONFIG: |
+      external_url 'http://gitlab.example.com:9090'
+      gitlab_rails['gitlab_shell_ssh_port'] = 2224
+  ports:
+    - '9090:9090'
+    - '2224:22'
+  volumes:
+    - '/srv/gitlab/config:/etc/gitlab'
+    - '/srv/gitlab/logs:/var/log/gitlab'
+    - '/srv/gitlab/data:/var/opt/gitlab'
+```
+
+This is the same as using `-p 9090:9090 -p 2224:22`.
+
+## Update GitLab using Docker compose
+
+Provided you [installed GitLab using docker-compose](#install-gitlab-using-docker-compose),
+all you have to do is run `docker-compose pull` and `docker-compose up -d` to
+download a new release and upgrade your GitLab instance.
+
+## Install GitLab into a cluster
+
+The GitLab Docker images can also be deployed to various container scheduling platforms.
+
+* Kubernetes using the [GitLab Helm Charts](https://docs.gitlab.com/ce/install/kubernetes/).
+* Docker Cloud using the [docker-compose config](#install-gitlab-using-docker-compose).
+
+<!-- - Mesosphere DC/OS using the [DC/OS Package](https://github.com/dcos/examples/tree/master/gitlab/1.8). -->
+
+## Troubleshooting
+
+### Sysctl tunning
+
+Running the image on a Raspbery Pi 3 or any other ARM board might require some `sysctl` values in order for it to run properly and have a good performance.
+
+All you need to is add the following at the end of `/etc/sysctl.conf`:
+
+```sh
+kernel.sem = 250 32000 32 262
+kernel.shmall = 1048575
+kernel.shmmax = 4294967295
+net.core.somaxconn = 1024
+```
+
+It can be done with `nano` or `vim` (e.g. `sudo nano /etc/sysctl.conf`).
+
+Once that is done, these values need to loaded to the system, you can do so by running `cat /etc/sysctl.conf /etc/sysctl.d/*.conf  | sudo sysctl -e -p -` and the host will be ready to run the GitLab docker image.
+
+### 500 Internal Error
+
+When updating the Docker image you may encounter an issue where all paths
+display the infamous **500** page. If this occurs, try to run
+`docker restart gitlab` to restart the container and rectify the issue.
+
+### Permission problems
+
+When updating from older GitLab Docker images you might encounter permission
+problems. This happens due to a fact that users in previous images were not
+preserved correctly. There's script that fixes permissions for all files.
+
+To fix your container, simply execute `update-permissions` and restart the
+container afterwards:
+
+```bash
+docker exec gitlab update-permissions
+docker restart gitlab
+```
+
+[docker compose]: https://docs.docker.com/compose/
+[install-compose]: https://docs.docker.com/compose/install/
+[down-yml]: docker/docker-compose.yml
+[docker-ports]: https://docs.docker.com/engine/reference/run/#/expose-incoming-ports
+
+### Linux ACL issues
+
+If you are using file ACLs on the docker host, the `docker`[^1] group requires full access to the volumes in order for GitLab to work.
+
+```bash
+$ getfacl /srv/gitlab
+# file: /srv/gitlab
+# owner: XXXX
+# group: XXXX
+user::rwx
+group::rwx
+group:docker:rwx
+mask::rwx
+default:user::rwx
+default:group::rwx
+default:group:docker:rwx
+default:mask::rwx
+default:other::r-x
+```
+
+If these are not correct, set them with:
+
+```sh
+$ sudo setfacl -mR default:group:docker:rwx /srv/gitlab
+```
+
+[^1]: `docker` is the default group, if you've changed this, update your commands accordingly.
+
+### Getting help
+
+If your problem is not listed here please see [getting help](https://about.gitlab.com/getting-help/) for the support channels.
+
+These docker images are not officially supported by GitLab Inc. still efforts are made to keep them up to date.
