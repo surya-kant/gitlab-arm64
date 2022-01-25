@@ -155,6 +155,10 @@ They are documented in the [environment variables section of the GitLab document
 
 ## After starting a container
 
+### Initial login into gitlab
+username: root
+password: written on $HOME/volumes/gitlab/config/initial_root_password (sudo cat $HOME/volumes/gitlab/config/initial_root_password)
+
 After starting a container you can visit <http://localhost/> or
 <http://192.168.59.103> if you use boot2docker. It might take a while before
 the Docker container starts to respond to queries.
