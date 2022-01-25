@@ -219,7 +219,7 @@ docker run -d \
 -v /srv/gitlab/config:/etc/gitlab \
 -v /srv/gitlab/logs:/var/log/gitlab \
 -v /srv/gitlab/data:/var/opt/gitlab \
-ulm0/gitlab
+suryakant24/gitlab-ce:arm64
 ```
 
 You can then access your GitLab instance at `http://1.1.1.1/` and `https://1.1.1.1/`.
@@ -257,7 +257,7 @@ docker run -d \
 -v /srv/gitlab/config:/etc/gitlab \
 -v /srv/gitlab/logs:/var/log/gitlab \
 -v /srv/gitlab/data:/var/opt/gitlab \
-ulm0/gitlab
+suryakant24/gitlab-ce:arm64
 ```
 
 You then need to appropriately configure `gitlab.rb`:
