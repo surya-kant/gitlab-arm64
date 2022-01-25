@@ -157,6 +157,7 @@ They are documented in the [environment variables section of the GitLab document
 
 ### Initial login into gitlab
 username: root
+
 password: written on $HOME/volumes/gitlab/config/initial_root_password (sudo cat $HOME/volumes/gitlab/config/initial_root_password)
 
 After starting a container you can visit <http://localhost/> or
