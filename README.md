@@ -37,7 +37,7 @@ docker run -d \
 -v /srv/gitlab/config:/etc/gitlab \
 -v /srv/gitlab/logs:/var/log/gitlab \
 -v /srv/gitlab/data:/var/opt/gitlab \
-suryakant24/gitlab-ce:arm64
+suryakant24/gitlab-ce-arm64:latest
 ```
 
 This will download and start a GitLab CE container and publish ports needed to
@@ -58,7 +58,7 @@ docker run -d \
 -v /srv/gitlab/config:/etc/gitlab:Z \
 -v /srv/gitlab/logs:/var/log/gitlab:Z \
 -v /srv/gitlab/data:/var/opt/gitlab:Z \
-suryakant24/gitlab-ce:arm64
+suryakant24/gitlab-ce-arm64:latest
 ```
 
 This will ensure that the Docker process has enough permissions to create the
@@ -143,7 +143,7 @@ sudo docker run --detach
 --volume $HOME/volumes/gitlab/config:/etc/gitlab
 --volume $HOME/volumes/gitlab/logs:/var/log/gitlab
 --volume $HOME/volumes/gitlab/data:/var/opt/gitlab
-suryakant24/gitlab-ce:arm64
+suryakant24/gitlab-ce-arm64:latest
 ```
 
 Note that every time you execute a `docker run` command, you need to provide
@@ -186,7 +186,7 @@ To upgrade GitLab to a new version you have to:
 3. Pull the new image:
 
     ```bash
-    docker pull suryakant24/gitlab-ce:arm64
+    docker pull suryakant24/gitlab-ce-arm64:latest
     ```
 
 4. Create the container once again with previously specified options:
@@ -200,7 +200,7 @@ To upgrade GitLab to a new version you have to:
     -v /srv/gitlab/config:/etc/gitlab \
     -v /srv/gitlab/logs:/var/log/gitlab \
     -v /srv/gitlab/data:/var/opt/gitlab \
-    suryakant24/gitlab-ce:arm64
+    suryakant24/gitlab-ce-arm64:latest
     ```
 
 On the first run, GitLab will reconfigure and update itself.
@@ -223,7 +223,7 @@ docker run -d \
 -v /srv/gitlab/config:/etc/gitlab \
 -v /srv/gitlab/logs:/var/log/gitlab \
 -v /srv/gitlab/data:/var/opt/gitlab \
-suryakant24/gitlab-ce:arm64
+suryakant24/gitlab-ce-arm64:latest
 ```
 
 You can then access your GitLab instance at `http://1.1.1.1/` and `https://1.1.1.1/`.
@@ -261,7 +261,7 @@ docker run -d \
 -v /srv/gitlab/config:/etc/gitlab \
 -v /srv/gitlab/logs:/var/log/gitlab \
 -v /srv/gitlab/data:/var/opt/gitlab \
-suryakant24/gitlab-ce:arm64
+suryakant24/gitlab-ce-arm64:latest
 ```
 
 You then need to appropriately configure `gitlab.rb`:
@@ -320,7 +320,7 @@ Docker-based GitLab installation.
 
     ```yaml
     web:
-      image: 'suryakant24/gitlab-ce:arm64'
+      image: 'suryakant24/gitlab-ce-arm64:latest'
       restart: always
       hostname: 'gitlab.example.com'
       environment:
@@ -349,7 +349,7 @@ HTTP and SSH port. Notice how the `GITLAB_OMNIBUS_CONFIG` variables match the
 
 ```yaml
 web:
-  image: 'suryakant24/gitlab-ce:arm64'
+  image: 'suryakant24/gitlab-ce-arm64:latest'
   restart: always
   hostname: 'gitlab.example.com'
   environment:
