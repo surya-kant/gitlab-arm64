@@ -3,7 +3,7 @@ Docker image build files for hosting container on ubuntu server on raspberrypi4.
 
 GitLab CE for ARM64 is in Docker Hub:
 
-- [suryakant24/gitlab-ce](https://hub.docker.com/r/suryakant24/gitlab-ce)
+- [suryakant24/gitlab-ce-arm64](https://hub.docker.com/r/suryakant24/gitlab-ce-arm64)
 
 The GitLab Docker image is a monolithic image of GitLab running all the necessary services on a single container.
 
