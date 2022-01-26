@@ -1,7 +1,7 @@
 # GitLab CE for arm64
-Docker image build files for hosting container on ubuntu server on raspberrypi4. Please boot your raspberry via USB as microSD card will wear out soon.
+Docker image build files for hosting container on ubuntu server on Raspberrypi4. Please boot your raspberry via USB as microSD card will wear out soon.
 
-GitLab CE for ARM64 is in Docker Hub:
+GitLab CE for (Raspberrypi4)ARM64 is in Docker Hub:
 
 - [suryakant24/gitlab-ce-arm64](https://hub.docker.com/r/suryakant24/gitlab-ce-arm64)
 
