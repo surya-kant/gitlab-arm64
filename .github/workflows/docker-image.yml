@@ -32,7 +32,7 @@ jobs:
         context: ./
         file: ./Dockerfile
         push: true
-        tags: ${{ secrets.DOCKER_HUB_USERNAME }}/gitlab-ce:arm64
-        cache-from: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/gitlab-ce:buildcache
-        cache-to: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/gitlab-ce:buildcache,mode=max
+        tags: ${{ secrets.DOCKER_HUB_USERNAME }}/gitlab-ce-arm64:latest
+        cache-from: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/gitlab-ce-arm64:buildcache
+        cache-to: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/gitlab-ce-arm64:buildcache,mode=max
 
